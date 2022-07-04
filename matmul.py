@@ -1,11 +1,23 @@
 #!usr/bin/env python3
 import numpy as np
 import time
-N = 2048;
+
+def GetDataFromFile(filename):
+    with open(filename, 'r') as f:
+        l = [[np.float32(num) for num in line.split(' ')] for line in f]
+        return l  
+       
 if __name__ == "__main__":
+    
+    # A = np.random.randn(N, N).astype(np.float32);
+    # B = np.random.randn(N, N).astype(np.float32);
+    
+    N = GetDataFromFile('matrix.csv')
+    A = np.matrix(GetDataFromFile('matrix.csv')) 
+    B = np.matrix(GetDataFromFile('matrix.csv')) 
+    N = len(A)
+    print (f"Matrix has {N} dimensions")
     ts = time.monotonic();
-    A = np.random.randn(N, N).astype(np.float32);
-    B = np.random.randn(N, N).astype(np.float32);
     C =  A @ B;
     te = time.monotonic();
 
