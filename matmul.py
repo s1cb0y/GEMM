@@ -15,10 +15,10 @@ if __name__ == "__main__":
     A = np.matrix(GetDataFromFile('matrix.dat')) 
     B = np.matrix(GetDataFromFile('matrix.dat')) 
     N = len(A)
-    print (f"Matrix has {N} dimensions")
+   
     ts = time.monotonic();
     C =  A @ B;
-    te = time.monotonic();
+    te = time.monotonic();   
 
     flops = 2*N*N*N / (te - ts) * 1e-9;
     print(f'{flops} GFLOPS');

@@ -20,7 +20,6 @@ class FileParser{
             return false;
         }
         float data;
-        char comma;  
           
         while (fstream >> data){            
             matData.push_back(data);
@@ -46,8 +45,9 @@ class FileParser{
         int k = 0;
         for (int i = 0; i < N; i++){
             for (int j = 0; j < N; j++){                
-                A[i][j] = matData[k++]; 
-                B[i][j] = matData[k++]; 
+                A[i][j] = matData[k]; 
+                B[i][j] = matData[k];
+                k++; 
             }   
         } 
     }
@@ -70,9 +70,9 @@ void multiply(){
             for (int k = 0; k < N; k++){
                 acc += A[r][k] * B[k][c];
             }
-            C[r][c] = acc;
+            C[r][c] = acc;                    
         }
-    }
+    }    
 }
 
 int main(){
