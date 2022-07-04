@@ -11,10 +11,9 @@ if __name__ == "__main__":
     
     # A = np.random.randn(N, N).astype(np.float32);
     # B = np.random.randn(N, N).astype(np.float32);
-    
-    N = GetDataFromFile('matrix.csv')
-    A = np.matrix(GetDataFromFile('matrix.csv')) 
-    B = np.matrix(GetDataFromFile('matrix.csv')) 
+  
+    A = np.matrix(GetDataFromFile('matrix.dat')) 
+    B = np.matrix(GetDataFromFile('matrix.dat')) 
     N = len(A)
     print (f"Matrix has {N} dimensions")
     ts = time.monotonic();
