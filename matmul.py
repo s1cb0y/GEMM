@@ -2,7 +2,7 @@
 import numpy as np
 import time
 
-N = 1024
+N = 4096
 def GetDataFromFile(filename):
     with open(filename, 'r') as f:
         l = [[np.float32(num) for num in line.split(' ')] for line in f]

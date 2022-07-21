@@ -2,9 +2,11 @@
 #include <iostream>
 #include <vector>
 #include <math.h>
+#include <cassert>
 #define MATRIX_DATA_FILE "matrix.dat"
 
-#define N 1024
+#define N 4096
+#define BLOCK 32
 
 float A[N][N];
 float B[N][N];
@@ -29,6 +31,31 @@ void multiply(){
     }    
 }
 
+void multiplyBlocked(){
+    assert(N%BLOCK == 0);
+    for (int rb = 0; rb < N; rb+=BLOCK){
+        for (int cb = 0; cb < N; cb+=BLOCK){
+            //compute
+            float tb[BLOCK][BLOCK];
+            for (int r = 0; r < BLOCK; r++){
+                for (int c = 0; c < BLOCK; c++){
+                    float acc = 0;
+                    for (int k = 0; k < N; k++){
+                        acc += A[r+rb][k] * B[k][c+cb];
+                    }
+                    tb[r][c] = acc;                    
+                }
+            }
+            // store
+            for (int r = 0 ; r < BLOCK ; r++){
+                for (int c = 0 ; c < BLOCK ; c++){
+                    C[rb+r][c+cb] = tb[r][c];
+                }
+            }
+        }
+    }    
+}
+
 int main(){
 
     FILE *f = fopen("matmul", "rb");
@@ -39,13 +66,13 @@ int main(){
         fclose(f);
 
         uint64_t start = nanos();
-        multiply();       
+        multiplyBlocked();       
         uint64_t end = nanos();
         double flop = N*N*2.0*N;
         double s = (end - start) * 1e-9;
         std::cout << "GFlops:" << flop*1e-9 / s << std::endl;
         // validate against numpy
-        for (int x = 0; x < N; x ++){
+        for (int x = 0; x < N; x ++){   
             for (int y = 0; y < N; y ++){
                 if (fabsf(C[x][y] - val[x][y]) > 1e-3){
                     std::cout << "Matrix not equal at position: " << x << ", " << y << std::endl;
@@ -53,8 +80,7 @@ int main(){
                     return 1;
                 }
             }
-        }
-
+        }      
     } else {
         std::cout << "File not found!\n";
         return 1;
