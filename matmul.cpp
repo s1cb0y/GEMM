@@ -5,7 +5,7 @@
 #include <cassert>
 #define MATRIX_DATA_FILE "matrix.dat"
 
-#define N 4096
+#define N 1024
 #define BLOCK 32
 
 float A[N][N];
@@ -24,7 +24,7 @@ void multiply(){
         for (int c = 0; c < N; c++){
             float acc = 0;
             for (int k = 0; k < N; k++){
-                acc += A[r][k] * B[k][c];
+                acc += A[r][k] * B[c][k];
             }
             C[r][c] = acc;                    
         }
@@ -41,7 +41,7 @@ void multiplyBlocked(){
                 for (int c = 0; c < BLOCK; c++){
                     float acc = 0;
                     for (int k = 0; k < N; k++){
-                        acc += A[r+rb][k] * B[k][c+cb];
+                        acc += A[r+rb][k] * B[c+cb][k];
                     }
                     tb[r][c] = acc;                    
                 }

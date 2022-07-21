@@ -2,7 +2,7 @@
 import numpy as np
 import time
 
-N = 4096
+N = 1024
 def GetDataFromFile(filename):
     with open(filename, 'r') as f:
         l = [[np.float32(num) for num in line.split(' ')] for line in f]
@@ -17,7 +17,7 @@ if __name__ == "__main__":
     # B = np.matrix(GetDataFromFile('matrix.dat')) 
     # N = len(A)    
     ts = time.monotonic();
-    C =  A @ B;
+    C =  A @ B.T;
     te = time.monotonic();  
 
     flops = 2*N*N*N / (te - ts) * 1e-9;
