@@ -1,6 +1,8 @@
 #!usr/bin/env python3
 import numpy as np
 import time
+import os
+os.environ['OMP_NUM_THREADS'] = '1'
 
 N = 4096
 def GetDataFromFile(filename):
@@ -15,13 +17,14 @@ if __name__ == "__main__":
     
     # A = np.matrix(GetDataFromFile('matrix.dat')) 
     # B = np.matrix(GetDataFromFile('matrix.dat')) 
-    # N = len(A)    
-    ts = time.monotonic();
-    C =  A @ B;
-    te = time.monotonic();  
+    # N = len(A)
+    for i in range(15):           
+        ts = time.monotonic();
+        C =  A @ B;
+        te = time.monotonic();  
 
-    flops = 2*N*N*N / (te - ts) * 1e-9;
-    print(f'{flops} GFLOPS');
+        flops = 2*N*N*N / (te - ts) * 1e-9;
+        print(f'{flops} GFLOPS');
 
     with open("matmul", "wb") as f:
         f.write(A.data);
