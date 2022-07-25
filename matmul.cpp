@@ -33,13 +33,11 @@ void multiplyBlocked(){
         for (int cb = 0; cb < N; cb+=BLOCK){
             //compute
             float tb[BLOCK][BLOCK];
-            for (int r = 0; r < BLOCK; r++){
-                for (int c = 0; c < BLOCK; c++){
-                    float acc = 0;
-                    for (int k = 0; k < N; k++){
-                        acc += A[(r+rb) * N +k] * B[(c+cb) * N + k];
-                    }
-                    C[(rb+r) * N + c+cb] = acc;                    
+            for (int k = 0; k < N; k++){
+                for (int r = 0; r < BLOCK; r++){
+                    for (int c = 0; c < BLOCK; c++){
+                            C[(rb+r) * N + c+cb] += A[(r+rb) * N +k] * B[(c+cb) * N + k];
+                        }
                 }
             }
         }
