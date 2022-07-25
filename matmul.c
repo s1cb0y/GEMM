@@ -1,19 +1,18 @@
-#include <fstream>
-#include <iostream>
-#include <vector>
+//clang -ffast-math -march=native -O3 matmul.c && ./a.out
+#include <time.h>
 #include <math.h>
-#include <cassert>
+#include <stdio.h>
+#include <assert.h>
 #include <immintrin.h>
-#define MATRIX_DATA_FILE "matrix.dat"
 
 #define N 1024
-#define BLOCK 8
+#define BLOCK 4
 
 
-float A[N*N];
-float B[N*N];
-float C[N*N];
-float val[N*N];
+float A[N*N]; __attribute__ ((__aligned__((32))))
+float B[N*N]; __attribute__ ((__aligned__((32))))
+float C[N*N]; __attribute__ ((__aligned__((32))))
+float val[N*N]; __attribute__ ((__aligned__((32))))
 
 __m256* Am = (__m256*) A;
 __m256* Bm = (__m256*) B;
@@ -32,7 +31,7 @@ void multiplyBlocked(){
     for (int rb = 0; rb < N; rb+=BLOCK){
         for (int cb = 0; cb < N; cb+=BLOCK){
             //compute
-            float tb[BLOCK][BLOCK];
+           
             for (int k = 0; k < N; k++){
                 for (int r = 0; r < BLOCK; r++){
                     for (int c = 0; c < BLOCK; c++){
@@ -85,17 +84,17 @@ int main(){
         uint64_t end = nanos();
         double flop = N*N*2.0*N;
         double s = (end - start) * 1e-9;
-        std::cout << "GFlops:" << flop*1e-9 / s << std::endl;
+        printf ("GFlops: %f\n", flop*1e-9 / s);;
         // validate against numpy
         for (int x = 0; x < N * N; x ++){  
             if (fabsf(C[x] - val[x]) > 1e-3){
-                std::cout << "Matrix not equal at position: " << x << std::endl;
-                std::cout << "C: " << C[x] << ", val:  " << val[x] << std::endl;
+                printf("Matrix not equal at position: %d\n", x);
+                printf("C: %f , val: %f ", C[x] , val[x]);
                 return 1;
             }
         }      
     } else {
-        std::cout << "File not found!\n";
+        printf( "File not found!\n");
         return 1;
     }
 
