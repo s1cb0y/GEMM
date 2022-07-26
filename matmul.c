@@ -6,7 +6,8 @@
 #include <immintrin.h>
 
 #define N 1024
-#define BLOCK 4
+#define BLOCK_R 4
+#define BLOCK_C 2
 
 
 float A[N*N]; __attribute__ ((__aligned__((32))))
@@ -27,14 +28,14 @@ uint64_t nanos(){
 
 #ifndef FAST
 void multiplyBlocked(){
-    assert(N%BLOCK == 0);
-    for (int rb = 0; rb < N; rb+=BLOCK){
-        for (int cb = 0; cb < N; cb+=BLOCK){
-            //compute
-           
+    assert(N%BLOCK_R == 0);
+    assert(N%BLOCK_C == 0);
+    for (int rb = 0; rb < N; rb+=BLOCK_R){
+        for (int cb = 0; cb < N; cb+=BLOCK_C){
+            //compute           
             for (int k = 0; k < N; k++){
-                for (int r = 0; r < BLOCK; r++){
-                    for (int c = 0; c < BLOCK; c++){
+                for (int r = 0; r < BLOCK_R; r++){
+                    for (int c = 0; c < BLOCK_C; c++){
                             C[(rb+r) * N + c+cb] += A[(r+rb) * N +k] * B[(c+cb) * N + k];
                         }
                 }
@@ -44,25 +45,26 @@ void multiplyBlocked(){
 }
 #else
 void multiplyBlocked(){
-    assert(N%BLOCK == 0);
-    for (int rb = 0; rb < N; rb+=BLOCK){
-        for (int cb = 0; cb < N; cb+=BLOCK){
+    assert(N%BLOCK_R == 0);
+    assert(N%BLOCK_C == 0);
+    for (int rb = 0; rb < N; rb+=BLOCK_R){
+        for (int cb = 0; cb < N; cb+=BLOCK_C){
             //compute
-            float tb[BLOCK][BLOCK];
-            for (int r = 0; r < BLOCK; r++){       
-                for (int c = 0; c < BLOCK; c++){                
+            float tb[BLOCK_R][BLOCK_C];
+            for (int r = 0; r < BLOCK_R; r++){       
+                for (int c = 0; c < BLOCK_C; c++){                
                     __m256 acc = {};
                     for (int k = 0; k < N; k+=8){
                         acc = _mm256_fmadd_ps(Am[((r+rb) * N +k) / 8], Bm[((c+cb) * N + k) / 8], acc);
                     }
                     float facc = 0.0;
-                    for (int i = 0; i < BLOCK; i++) facc += acc[i];
+                    for (int i = 0; i < 8; i++) facc += acc[i];
                     tb[r][c] = facc;      
                 }              
             }
             // store
-            for (int r = 0 ; r < BLOCK ; r++){
-                for (int c = 0 ; c < BLOCK ; c++){
+            for (int r = 0 ; r < BLOCK_R ; r++){
+                for (int c = 0 ; c < BLOCK_C ; c++){
                     C[(rb+r) * N + c+cb] = tb[r][c];
                 }
             }
