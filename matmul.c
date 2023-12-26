@@ -5,6 +5,8 @@
 #include <assert.h>
 #include <immintrin.h>
 #include <stdint.h>
+#include "matmulGPU.h"
+
 #define N 1024
 #define BLOCK_R 4
 #define BLOCK_C 2
@@ -25,6 +27,17 @@ uint64_t nanos(){
     return (uint64_t) time.tv_sec * 1e9 + (uint64_t) time.tv_nsec;
 }
 
+void simpleMultiply(){
+    for (int r=0; r<N; r++) {
+        for (int c=0; c<N; c++) {
+            float acc = 0.0f;
+            for (int k=0; k<N; k++) {
+                acc += A[r*N + k] * B[c*N + k];
+            }
+            C[r*N + c] = acc;
+        }
+    }
+}
 
 #ifndef FAST
 void multiplyBlocked(){
@@ -80,6 +93,9 @@ void multiplyBlocked(){
     }
 }
 #endif
+
+
+
 int main(){
 
     FILE *f = fopen("matmul", "rb");
@@ -89,12 +105,28 @@ int main(){
         fread(val, sizeof(float), N*N, f);
         fclose(f);
 
+        // simple multiply
         uint64_t start = nanos();
-        multiplyBlocked();             
+        simpleMultiply();
         uint64_t end = nanos();
         double flop = N*N*2.0*N;
         double s = (end - start) * 1e-9;
-        printf ("GFlops: %f\n", flop*1e-9 / s);;
+        printf ("GFlops (naive approach): %f\n", flop*1e-9 / s);;
+        
+        // blocked CPU multiply
+        start = nanos();
+        multiplyBlocked();             
+        end = nanos();
+        s = (end - start) * 1e-9;
+        printf ("GFlops (blocked approach): %f\n", flop*1e-9 / s);
+        
+
+        // GPU multiply
+        start = nanos();
+        multiplyGPU(A, B, C, N);
+        end = nanos();
+        s = (end - start) * 1e-9;
+        printf ("GFlops (GPU approach): %f\n", flop*1e-9 / s);
         // validate against numpy
         for (int x = 0; x < N * N; x ++){  
             if (fabsf(C[x] - val[x]) > 1e-3){
