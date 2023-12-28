@@ -40,7 +40,6 @@ void simpleMultiply(){
     }
 }
 
-// cache-aware imlementation
 // void simpleMultiplyFast(){
     
 //     for (int r=0; r<N; r++) {
@@ -53,19 +52,33 @@ void simpleMultiply(){
 // }
 
 const uint32_t TILE_SIZE = 4;
-// with tiling and cache-aware imlementation
+#define BLOCK_Y 8
+#define BLOCK_X 2
+#define BLOCK_F 8
+// with tiling and
 void simpleMultiplyFast(){
     
     for (int t = 0; t < N; t+=TILE_SIZE){
         for (int r=0; r<N; r++) {
             for (int k=t; k<t+TILE_SIZE; k++) {
-                for (int c=0; c<N; c++) {                
-                    C[r*N + c] += A[r*N +k] * B[k*N + c];
-                }
+                for (int c=0; c<N; c+=BLOCK_Y*BLOCK_F) {      
+                    __m256 acc[BLOCK_Y] = {};                 
+                    __m256 ar = _mm256_broadcast_ss(&A[(r)*N + k]);
+                    for (int cb = 0; cb < BLOCK_Y; cb++){ // Force to use all 16 YMM registers
+                        //acc[cb] += ar * B[k*N + c + cb];
+                        acc[cb] += _mm256_fmadd_ps(ar, Bm[((k*N + c + cb*BLOCK_F)/8)], acc[cb]);
+                    }                      
+                
+                    for (int cb = 0; cb < BLOCK_Y; cb++){ // store registers back to RAM
+                        Cm[((r*N + c + cb*8) / 8)] += acc[cb];
+                    }
+                    
+                }                
             }
         }
     }
 }
+
 // #ifndef FAST
 // void multiplyBlocked(){
 //     assert(N%BLOCK_R == 0);
@@ -136,7 +149,7 @@ int main(){
         double s;
         double flop = N*N*2.0*N;
 
-        for (int i = 0; i < 1; i++) {
+        for (int i = 0; i < 4; i++) {
             // memset(C, 0, N*N*sizeof(float));
             // // simple multiply
             // start = nanos();
