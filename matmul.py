@@ -20,7 +20,7 @@ if __name__ == "__main__":
     # N = len(A)
     for i in range(15):           
         ts = time.monotonic();
-        C =  A @ B.T;
+        C =  A @ B
         te = time.monotonic();  
 
         flops = 2*N*N*N / (te - ts) * 1e-9;

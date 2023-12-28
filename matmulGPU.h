@@ -9,13 +9,13 @@ const char *KernelSource = "\n" \
 "                       const int N) { \n" \
 "      \n" \
 "     // Thread identifiers \n" \
-"     const int globalRow = get_global_id(0); // Row ID of C (0..M) \n" \
+"     const int globalRow = get_global_id(0); // Row ID of C (0..N) \n" \
 "     const int globalCol = get_global_id(1); // Col ID of C (0..N) \n" \
 "     \n" \
 "     // Compute a single element (loop over N) \n" \
 "     float acc = 0.0f; \n" \
 "     for (int k=0; k<N; k++) { \n" \
-"         acc += A[globalRow*N + k] * B[N * globalCol + k]; \n" \
+"         acc += A[globalRow*N + k] * B[N * k + globalCol]; \n" \
 "     } \n" \
 "     \n" \
 "     // Store the result \n" \
@@ -25,9 +25,7 @@ const char *KernelSource = "\n" \
 
 int multiplyGPU(float* A, float* B, float *C, uint32_t N){
     int err = 0;
-    
-//    size_t global[2];                      // global domain size for our calculation
-//    size_t local[2];     
+   
     const int TS = 32;
     const size_t local[2] = { TS, TS };
     const size_t global[2] = { N, N };

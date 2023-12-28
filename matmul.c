@@ -12,10 +12,11 @@
 #define BLOCK_C 2
 
 
-float A[N*N]; __attribute__ ((__aligned__((32))))
-float B[N*N]; __attribute__ ((__aligned__((32))))
-float C[N*N]; __attribute__ ((__aligned__((32))))
-float val[N*N]; __attribute__ ((__aligned__((32))))
+float A[N*N]; __attribute__ ((__aligned__((64))))
+float B[N*N]; __attribute__ ((__aligned__((64))))
+float C[N*N]; __attribute__ ((__aligned__((64))))
+float val[N*N]; __attribute__ ((__aligned__((64))))
+
 
 __m256* Am = (__m256*) A;
 __m256* Bm = (__m256*) B;
@@ -32,37 +33,63 @@ void simpleMultiply(){
         for (int c=0; c<N; c++) {
             float acc = 0.0f;
             for (int k=0; k<N; k++) {
-                acc += A[r*N + k] * B[c*N + k];
+                acc += A[r*N + k] * B[k*N + c];
             }
             C[r*N + c] = acc;
         }
     }
 }
 
-#ifndef FAST
-void multiplyBlocked(){
-    assert(N%BLOCK_R == 0);
-    assert(N%BLOCK_C == 0);
-    for (int rb = 0; rb < N; rb+=BLOCK_R){
-        for (int cb = 0; cb < N; cb+=BLOCK_C){
-           float tc[BLOCK_R][BLOCK_C] = {};
-            for (int k = 0; k < N; k++) {
-                for (int y = 0; y < BLOCK_R; y++) {
-                    for (int x = 0; x < BLOCK_C; x++) {
-                        tc[y][x] += A[(rb+y)*N + k] * B[(cb+x)*N + k];
-                    }
+// cache-aware imlementation
+// void simpleMultiplyFast(){
+    
+//     for (int r=0; r<N; r++) {
+//         for (int k=0; k<N; k++) {
+//             for (int c=0; c<N; c++) {                
+//                 C[r*N + c] += A[r*N + k] * B[k*N + c];
+//             }
+//         }
+//     }
+// }
+
+const uint32_t TILE_SIZE = 4;
+// with tiling and cache-aware imlementation
+void simpleMultiplyFast(){
+    
+    for (int t = 0; t < N; t+=TILE_SIZE){
+        for (int r=0; r<N; r++) {
+            for (int k=t; k<t+TILE_SIZE; k++) {
+                for (int c=0; c<N; c++) {                
+                    C[r*N + c] += A[r*N +k] * B[k*N + c];
                 }
             }
-            // store
-            for (int y = 0; y < BLOCK_R; y++) {
-                for (int x = 0; x < BLOCK_C; x++) {
-                C[(rb+y)*N + cb+x] = tc[y][x];
-                }
-            }
-        }    
+        }
     }
 }
-#else
+// #ifndef FAST
+// void multiplyBlocked(){
+//     assert(N%BLOCK_R == 0);
+//     assert(N%BLOCK_C == 0);
+//     for (int rb = 0; rb < N; rb+=BLOCK_R){
+//         for (int cb = 0; cb < N; cb+=BLOCK_C){
+//            float tc[BLOCK_R][BLOCK_C] = {};
+//             for (int k = 0; k < N; k++) {
+//                 for (int y = 0; y < BLOCK_R; y++) {
+//                     for (int x = 0; x < BLOCK_C; x++) {
+//                         tc[y][x] += A[(rb+y)*N + k] * B[(cb+x)*N + k];
+//                     }
+//                 }
+//             }
+//             // store
+//             for (int y = 0; y < BLOCK_R; y++) {
+//                 for (int x = 0; x < BLOCK_C; x++) {
+//                 C[(rb+y)*N + cb+x] = tc[y][x];
+//                 }
+//             }
+//         }    
+//     }
+// }
+//#else
 void multiplyBlocked(){
     assert(N%BLOCK_R == 0);
     assert(N%BLOCK_C == 0);
@@ -92,7 +119,7 @@ void multiplyBlocked(){
         }    
     }
 }
-#endif
+//#endif
 
 
 
@@ -104,29 +131,44 @@ int main(){
         fread(B, sizeof(float), N*N, f);
         fread(val, sizeof(float), N*N, f);
         fclose(f);
-
-        // simple multiply
-        uint64_t start = nanos();
-        simpleMultiply();
-        uint64_t end = nanos();
+        uint64_t start;
+        uint64_t end;
+        double s;
         double flop = N*N*2.0*N;
-        double s = (end - start) * 1e-9;
-        printf ("GFlops (naive approach): %f\n", flop*1e-9 / s);;
-        
-        // blocked CPU multiply
-        start = nanos();
-        multiplyBlocked();             
-        end = nanos();
-        s = (end - start) * 1e-9;
-        printf ("GFlops (blocked approach): %f\n", flop*1e-9 / s);
-        
 
-        // GPU multiply
-        start = nanos();
-        multiplyGPU(A, B, C, N);
-        end = nanos();
-        s = (end - start) * 1e-9;
-        printf ("GFlops (GPU approach): %f\n", flop*1e-9 / s);
+        for (int i = 0; i < 1; i++) {
+            // memset(C, 0, N*N*sizeof(float));
+            // // simple multiply
+            // start = nanos();
+            // simpleMultiply();
+            // end = nanos();
+            
+            // s = (end - start) * 1e-9;
+            // printf ("GFlops (naive approach): %f\n", flop*1e-9 / s);
+            
+            memset(C, 0, N*N*sizeof(float));
+            //simple multiply (optimized)
+            start = nanos();
+            simpleMultiplyFast();
+            end = nanos();
+            s = (end - start) * 1e-9;
+            printf ("GFlops (naive optimized approach) / Time (s): %f, %f\n", flop*1e-9 / s, s);
+            
+            // //blocked CPU multiply
+            // start = nanos();            
+            // multiplyBlocked();             
+            // end = nanos();
+            // s = (end - start) * 1e-9;
+            // printf ("GFlops (blocked approach): %f\n", flop*1e-9 / s);
+            
+            // memset(C, 0, N*N*sizeof(float));
+            // // GPU multiply
+            // start = nanos();
+            // multiplyGPU(A, B, C, N);
+            // end = nanos();
+            // s = (end - start) * 1e-9;
+            // printf ("GFlops (GPU approach): %f\n", flop*1e-9 / s);
+        }
         // validate against numpy
         for (int x = 0; x < N * N; x ++){  
             if (fabsf(C[x] - val[x]) > 1e-3){
