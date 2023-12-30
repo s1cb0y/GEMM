@@ -8,9 +8,9 @@
 #include <string.h>
 //#include "matmulGPU.h"
 
-#define N 1024
-#define BLOCK_Y 4
-#define BLOCK_X 2
+#define N 768
+#define BLOCK_Y 32  
+#define BLOCK_X 32 
 #define BLOCK 8
 
 
@@ -39,96 +39,68 @@ void simpleMultiply(){
         }
     }
 }
-
-// void simpleMultiplyFast(){
-    
-//     for (int r=0; r<N; r++) {
-//         for (int k=0; k<N; k++) {
-//             for (int c=0; c<N; c++) {                
-//                 C[r*N + c] += A[r*N + k] * B[k*N + c];
-//             }
-//         }
-//     }
-// }
-
 const uint32_t TILE_SIZE = 4;
 
-// with tiling and
+// re-arranged k-loop
+// use tiling 
 void simpleMultiplyFast(){
-    
-    for (int t = 0; t < N; t+=TILE_SIZE){
-        for (int r=0; r<N; r++) {
-            for (int k=t; k<t+TILE_SIZE; k++) {
-                for (int c=0; c<N; c+=BLOCK_Y*BLOCK) {      
-                    __m256 acc[BLOCK_Y] = {};                 
-                    __m256 ar = _mm256_broadcast_ss(&A[(r)*N + k]);
-                    for (int cb = 0; cb < BLOCK_Y; cb++){ // Force to use all 16 YMM registers
-                        //acc[cb] += ar * B[k*N + c + cb];
-                        acc[cb] += _mm256_fmadd_ps(ar, Bm[((k*N + c + cb*BLOCK)/8)], acc[cb]);
-                    }                      
-                
-                    for (int cb = 0; cb < BLOCK_Y; cb++){ // store registers back to RAM
-                        Cm[((r*N + c + cb*8) / 8)] += acc[cb];
-                    }
-                    
-                }                
-            }
-        }
-    }
+    for (int t=0; t<N; t+=TILE_SIZE){
+      for (int r=0; r<N; r++) {
+         for (int k=t; k<t+TILE_SIZE; k++) {
+               for (int c=0; c<N; c++) {                
+                  C[r*N + c] += A[r*N + k] * B[k*N + c];
+               }
+         }
+      }
+   }
 }
 
+
 // #ifndef FAST
+void multiplyBlocked(){
+      assert(N%BLOCK_X == 0);
+      assert(N%BLOCK_Y == 0);
+      for (int cb = 0; cb < N; cb+=BLOCK_X){
+         for (int r = 0; r < N; r++){
+            for (int k=0; k<N; k+=BLOCK_X){
+               for(int rr=0; rr<BLOCK_Y; rr++){
+                  for(int cc=0; cc<BLOCK_X; cc++){
+                     C[r*N+cb+cc] += A[r*N+k+rr] * B[k*N+rr*N +cb + cc];
+                  }
+               }
+            }
+            }
+      }
+}
+//#else
 // void multiplyBlocked(){
-//     assert(N%BLOCK_R == 0);
-//     assert(N%BLOCK_C == 0);
-//     for (int rb = 0; rb < N; rb+=BLOCK_R){
-//         for (int cb = 0; cb < N; cb+=BLOCK_C){
-//            float tc[BLOCK_R][BLOCK_C] = {};
-//             for (int k = 0; k < N; k++) {
-//                 for (int y = 0; y < BLOCK_R; y++) {
-//                     for (int x = 0; x < BLOCK_C; x++) {
-//                         tc[y][x] += A[(rb+y)*N + k] * B[(cb+x)*N + k];
-//                     }
+//     assert(N%BLOCK_X == 0);
+//     assert(N%BLOCK_Y == 0);
+//     for (int rb = 0; rb < N; rb+=BLOCK_Y){
+//         for (int cb = 0; cb < N; cb+=BLOCK_X){
+//              __m256 tc[BLOCK_Y][BLOCK_X] = {};
+//             for (int k = 0; k < N; k += 8) {
+//                 for (int y = 0; y < BLOCK_Y; y++) {
+//                 for (int x = 0; x < BLOCK_X; x++) {
+//                     tc[y][x] = _mm256_fmadd_ps(
+//                     Am[((rb+y)*N + k)/8],
+//                     Bm[((cb+x)*N + k)/8],
+//                     tc[y][x]);
+//                 }
 //                 }
 //             }
+
 //             // store
-//             for (int y = 0; y < BLOCK_R; y++) {
-//                 for (int x = 0; x < BLOCK_C; x++) {
-//                 C[(rb+y)*N + cb+x] = tc[y][x];
+//             for (int y = 0; y < BLOCK_Y; y++) {
+//                 for (int x = 0; x < BLOCK_X; x++) {
+//                 float ftmp = 0.0;
+//                 for (int i = 0; i < 8; i++) ftmp += tc[y][x][i];
+//                 C[(rb+y)*N + cb+x] = ftmp;
 //                 }
-//             }
+//       }
 //         }    
 //     }
 // }
-//#else
-void multiplyBlocked(){
-    assert(N%BLOCK_X == 0);
-    assert(N%BLOCK_Y == 0);
-    for (int rb = 0; rb < N; rb+=BLOCK_Y){
-        for (int cb = 0; cb < N; cb+=BLOCK_X){
-             __m256 tc[BLOCK_Y][BLOCK_X] = {};
-            for (int k = 0; k < N; k += 8) {
-                for (int y = 0; y < BLOCK_Y; y++) {
-                for (int x = 0; x < BLOCK_X; x++) {
-                    tc[y][x] = _mm256_fmadd_ps(
-                    Am[((rb+y)*N + k)/8],
-                    Bm[((cb+x)*N + k)/8],
-                    tc[y][x]);
-                }
-                }
-            }
-
-            // store
-            for (int y = 0; y < BLOCK_Y; y++) {
-                for (int x = 0; x < BLOCK_X; x++) {
-                float ftmp = 0.0;
-                for (int i = 0; i < 8; i++) ftmp += tc[y][x][i];
-                C[(rb+y)*N + cb+x] = ftmp;
-                }
-      }
-        }    
-    }
-}
 //#endif
 
 
@@ -164,12 +136,13 @@ int main(){
             s = (end - start) * 1e-9;
             printf ("GFlops (naive optimized approach) / Time (s): %f, %f\n", flop*1e-9 / s, s);
             
-            //blocked CPU multiply
-            start = nanos();            
-            multiplyBlocked();             
-            end = nanos();
-            s = (end - start) * 1e-9;
-            printf ("GFlops (blocked approach): %f\n", flop*1e-9 / s);
+            // memset(C, 0, N*N*sizeof(float));
+            // //blocked CPU multiply
+            // start = nanos();            
+            // multiplyBlocked();             
+            // end = nanos();
+            // s = (end - start) * 1e-9;
+            // printf ("GFlops (blocked approach) / TIME (s): %f, %f \n", flop*1e-9 / s, s);
             
             // memset(C, 0, N*N*sizeof(float));
             // // GPU multiply
