@@ -10,8 +10,8 @@
 
 #define N 768
 #define BLOCK 8
-#define BLOCK_Y 2  
-#define BLOCK_X 4
+#define BLOCK_Y 4  
+#define BLOCK_X 2
 
 
 float A[N*N]; __attribute__ ((__aligned__((64))))

@@ -4,7 +4,7 @@ import time
 import os
 os.environ['OMP_NUM_THREADS'] = '1'
 
-N = 1024
+N = 768
 def GetDataFromFile(filename):
     with open(filename, 'r') as f:
         l = [[np.float32(num) for num in line.split(' ')] for line in f]
