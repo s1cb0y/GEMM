@@ -1,18 +1,23 @@
-//clang -ffast-math -march=native -O3 matmul.c && ./a.out
+//clang -ffast-math -march=native -O3 matmul.c -DTHREADS=6 && ./a.out
 #include <time.h>
 #include <math.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <assert.h>
 #include <immintrin.h>
 #include <stdint.h>
 #include <string.h>
+#include <pthread.h>
+
 //#include "matmulGPU.h"
 
-#define N 768
-#define BLOCK 8
+#define N 1024
 #define BLOCK_Y 4  
 #define BLOCK_X 2
 
+#ifndef THREADS 
+    #define THREADS 1
+#endif
 
 float A[N*N]; __attribute__ ((__aligned__((64))))
 float B[N*N]; __attribute__ ((__aligned__((64))))
@@ -48,16 +53,14 @@ void simpleMultiply(){
 }
 
 
-void blockedMultiply(){
-    for (int r=0; r<N; r+=BLOCK_Y) {
+void blockedMultiply(uint32_t start_y, uint32_t end_y){
+    for (int r=start_y; r<end_y; r+=BLOCK_Y) {
         for (int c=0; c<N; c+=BLOCK_X) {
             float acc[BLOCK_Y][BLOCK_X] = {};
             for (int k=0; k<N; k++) {
-                //printf("**** k: %d***** \n", k);
                 for (int rr=0; rr<BLOCK_Y; rr++){
                     float a = A[(r+rr)*N + k];
                     for (int cc=0; cc<BLOCK_X; cc++){       
-                  //      printf("acc[%d,%d], A[%d,%d],  B[%d,%d]\n", rr, cc, (r+rr), k, (c+cc), k); 
                         acc[rr][cc] += a * BT[(c+cc)*N + k];
                     }
                 }
@@ -71,6 +74,12 @@ void blockedMultiply(){
     }
 }
 
+void *threadMultiply(void* n){
+    int start_y = N/THREADS * (int) n;
+    int end_y   = N/THREADS * ((int)n+1);
+    blockedMultiply(start_y, end_y);
+    return NULL;
+} 
 
 
 int main(){
@@ -86,8 +95,10 @@ int main(){
         double s;
         double flop = N*N*2.0*N;
         Transpose();
-
-        for (int i = 0; i < 4; i++) {
+        
+        printf("**** using %d threads ****\n", THREADS);
+       
+        for (int i = 0; i < 10;  i++) {
             memset(C, 0, N*N*sizeof(float));
             // simple multiply
             // start = nanos();
@@ -96,14 +107,28 @@ int main(){
             
             // s = (end - start) * 1e-9;
             // printf ("GFlops (naive approach): %f\n", flop*1e-9 / s);
-            
-            memset(C, 0, N*N*sizeof(float));
-            //simple multiply (optimized)
-            start = nanos();
-            blockedMultiply();
-            end = nanos();
-            s = (end - start) * 1e-9;
-            printf ("GFlops (blocked approach) / Time (s): %f, %f\n", flop*1e-9 / s, s);
+
+            #if THREADS > 1
+                start = nanos();
+                pthread_t threads[THREADS];
+                for(int j = 0; j< THREADS; j++){
+                    pthread_create(&threads[j], NULL, threadMultiply, (void*)j);
+                }
+                for(int j = 0; j< THREADS; j++){
+                    pthread_join(threads[j], NULL);
+                }
+                end = nanos();
+                s = (end - start) * 1e-9;
+                printf ("GFlops (threaded approach): %f\n", flop*1e-9 / s);
+            #else
+                memset(C, 0, N*N*sizeof(float));
+                //simple multiply (optimized)
+                start = nanos();
+                blockedMultiply(0, N);
+                end = nanos();
+                s = (end - start) * 1e-9;
+                printf ("GFlops (blocked approach) / Time (s): %f, %f\n", flop*1e-9 / s, s);
+            #endif
            
     
         }

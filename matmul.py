@@ -1,10 +1,11 @@
-#!usr/bin/env python3
+#!/usr/bin/env python
 import numpy as np
 import time
 import os
-os.environ['OMP_NUM_THREADS'] = '1'
 
-N = 768
+#os.environ['OMP_NUM_THREADS'] = '1'
+
+N = 1024
 def GetDataFromFile(filename):
     with open(filename, 'r') as f:
         l = [[np.float32(num) for num in line.split(' ')] for line in f]
@@ -14,10 +15,7 @@ if __name__ == "__main__":
     
     A = np.random.randn(N, N).astype(np.float32);
     B = np.random.randn(N, N).astype(np.float32);
-    
-    # A = np.matrix(GetDataFromFile('matrix.dat')) 
-    # B = np.matrix(GetDataFromFile('matrix.dat')) 
-    # N = len(A)
+ 
     for i in range(15):           
         ts = time.monotonic();
         C =  A @ B
