@@ -5,4 +5,6 @@ Multi threading could be used if compiled with -DTHREADS=2.
 
 Please generate matrix data first by executing matmul.py (uses numpy)
 
+clang -ffast-math -march=native -O3 matmul.c -DTHREADS=6 && ./a.out
+
 Thanks geohot for inspiration and great youtube content!

@@ -1,1 +1,0 @@
-clang matmul.c -O2 -D FAST -mfma -o test.out
