@@ -21,14 +21,14 @@ typedef struct ThreadArgs{
 } ThreadArgs;
 
 #ifdef __unix__
-void *threadMultiply(void* args){
-    ThreadArgs args = {N,j};
+void *threadMultiply(void* _args){
+    ThreadArgs* args = (ThreadArgs*)_args;
     int start_y = args->N/THREADS * args->n;
     int end_y   = args->N/THREADS * (args->n+1);
     blockedMultiply(start_y, end_y);
     return NULL;
 }    
-void CreateAndExecuteThreads(){
+void CreateAndExecuteThreads(int N){
     pthread_t threads[THREADS];
     for(int j = 0; j< THREADS; j++){
         ThreadArgs args = {N,j};
