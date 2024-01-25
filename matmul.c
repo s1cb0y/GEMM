@@ -2,22 +2,18 @@
 #include <time.h>
 #include <math.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <assert.h>
 #include <immintrin.h>
 #include <stdint.h>
 #include <string.h>
-#include <pthread.h>
-
+#include "threads.h"
 //#include "matmulGPU.h"
+
 
 #define N 1024
 #define BLOCK_Y 4  
 #define BLOCK_X 2
 
-#ifndef THREADS 
-    #define THREADS 1
-#endif
 
 float A[N*N]; __attribute__ ((__aligned__((64))))
 float B[N*N]; __attribute__ ((__aligned__((64))))
@@ -26,9 +22,18 @@ float C[N*N]; __attribute__ ((__aligned__((64))))
 float val[N*N]; __attribute__ ((__aligned__((64))))
 
 uint64_t nanos(){
+#ifdef __unix__
     struct timespec time;
-    clock_gettime(CLOCK_MONOTONIC_RAW, &time);           
+    clock_gettime(CLOCK_MONOTONIC, &time);           
     return (uint64_t) time.tv_sec * 1e9 + (uint64_t) time.tv_nsec;
+#elif defined(_WIN32) || defined(WIN32)
+    struct timespec ts;
+    if (timespec_get(&ts, TIME_UTC) != TIME_UTC){
+        fputs("timespec_get failed!", stderr);
+        return 0;
+    }
+    return 1000000000 * ts.tv_sec + ts.tv_nsec;
+#endif
 }
 
 void Transpose(){
@@ -74,13 +79,6 @@ void blockedMultiply(uint32_t start_y, uint32_t end_y){
     }
 }
 
-void *threadMultiply(void* n){
-    int start_y = N/THREADS * (int) n;
-    int end_y   = N/THREADS * ((int)n+1);
-    blockedMultiply(start_y, end_y);
-    return NULL;
-} 
-
 
 int main(){
 
@@ -100,23 +98,17 @@ int main(){
        
         for (int i = 0; i < 10;  i++) {
             memset(C, 0, N*N*sizeof(float));
-            // simple multiply
-            // start = nanos();
-            // simpleMultiply();
-            // end = nanos();
+            //simple multiply
+            start = nanos();
+            simpleMultiply();
+            end = nanos();
             
-            // s = (end - start) * 1e-9;
-            // printf ("GFlops (naive approach): %f\n", flop*1e-9 / s);
+            s = (end - start) * 1e-9;
+            printf ("GFlops (naive approach): %f\n", flop*1e-9 / s);
 
             #if THREADS > 1
                 start = nanos();
-                pthread_t threads[THREADS];
-                for(int j = 0; j< THREADS; j++){
-                    pthread_create(&threads[j], NULL, threadMultiply, (void*)j);
-                }
-                for(int j = 0; j< THREADS; j++){
-                    pthread_join(threads[j], NULL);
-                }
+                CreateAndExecuteThreads(N);
                 end = nanos();
                 s = (end - start) * 1e-9;
                 printf ("GFlops (threaded approach): %f\n", flop*1e-9 / s);
