@@ -1,7 +1,7 @@
 
 
 #include <stdint.h>
-#ifdef __unix__
+#if defined(__unix__) || defined(__APPLE__)
     #include <pthread.h>
     #include <unistd.h>
 #elif defined(_WIN32) || defined(WIN32)
@@ -20,7 +20,7 @@ typedef struct ThreadArgs{
     int n; //slice number
 } ThreadArgs;
 
-#ifdef __unix__
+#if defined(__unix__) || defined(__APPLE__)
 void *threadMultiply(void* _args){
     ThreadArgs* args = (ThreadArgs*)_args;
     int start_y = args->N/THREADS * args->n;

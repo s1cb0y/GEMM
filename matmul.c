@@ -22,7 +22,7 @@ float C[N*N]; __attribute__ ((__aligned__((64))))
 float val[N*N]; __attribute__ ((__aligned__((64))))
 
 uint64_t nanos(){
-#ifdef __unix__
+#if defined(__unix__) || defined(__APPLE__)
     struct timespec time;
     clock_gettime(CLOCK_MONOTONIC, &time);           
     return (uint64_t) time.tv_sec * 1e9 + (uint64_t) time.tv_nsec;
