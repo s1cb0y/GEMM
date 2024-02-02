@@ -1,5 +1,5 @@
-//clang -ffast-math -march=native -O3 matmul.c -DTHREADS=6 && ./a.out
-#include <time.h>
+//clang -ffast-math -march=native -O3 matmul.c -lpthread -DTHREADS=6 && ./a.out
+
 #include <math.h>
 #include <stdio.h>
 #include <assert.h>
@@ -8,7 +8,7 @@
 #include <string.h>
 #include "threads.h"
 //#include "matmulGPU.h"
-
+#include "helpers.h"
 
 #define N 1024
 #define BLOCK_Y 4  
@@ -21,20 +21,7 @@ float BT[N*N]; __attribute__ ((__aligned__((64))))
 float C[N*N]; __attribute__ ((__aligned__((64))))
 float val[N*N]; __attribute__ ((__aligned__((64))))
 
-uint64_t nanos(){
-#if defined(__unix__) || defined(__APPLE__)
-    struct timespec time;
-    clock_gettime(CLOCK_MONOTONIC, &time);           
-    return (uint64_t) time.tv_sec * 1e9 + (uint64_t) time.tv_nsec;
-#elif defined(_WIN32) || defined(WIN32)
-    struct timespec ts;
-    if (timespec_get(&ts, TIME_UTC) != TIME_UTC){
-        fputs("timespec_get failed!", stderr);
-        return 0;
-    }
-    return 1000000000 * ts.tv_sec + ts.tv_nsec;
-#endif
-}
+
 
 void Transpose(){
     for (int y = 0; y<N; y++){
